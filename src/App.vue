@@ -1,7 +1,7 @@
 <template>
   <div id="app" style="height: 100%">
     <router-view/>
-    
+
     <!-- 全局通知弹窗 - 只需要在这里引入一次 -->
     <NotificationModal
       :visible="$store.state.notification.visible"
@@ -15,35 +15,15 @@
 </template>
 
 <script>
-  import NotificationModal from '@/components/NotificationModal'
-  import pollingService from '@/utils/pollingService'
-
   import axios from 'axios'
   import { allowRouters } from '@/router/index.js'
   export default {
     name: 'App',
-    components: {
-      NotificationModal
-    },
-    mounted() {
-      // 初始化通知数据
-      this.$store.dispatch('notification/initNotificationData')
-      
-      // 启动轮询服务
-      pollingService.start()
-    },
-    beforeDestroy() {
-      // 组件销毁时停止轮询
-      pollingService.stop()
-    },
     created() {
       this.initState()
       this.getMenuList()
     },
     methods: {
-      closeNotification() {
-        this.$store.commit('notification/HIDE_NOTIFICATION')
-      },
       // 初始化State
       initState() {
         this.$store.dispatch('user/initState')
@@ -57,7 +37,7 @@
         if(href.indexOf('localhost') === -1) {
           url = '/' + href.split('/')[3] + url
 
-        }        
+        }
       },
       /**
        * 根据权限匹配路由并返回
