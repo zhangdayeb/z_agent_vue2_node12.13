@@ -3,16 +3,11 @@
     <div class="right-wrap">
       <div class="login-language"></div>
       <header class="header" style="margin-top: 4rem;">
-        <div class="login-log">
-          <img style="width: 100px; height: 100px;" src="~@/assets/img/login/yb12.png" alt="" srcset="">
-        </div>
         <div class="login-text">
-          <!-- <div class="login-log-text">ACE国际娱乐</div> -->
-          <!-- <div>CASINO</div> -->
           <div>管理专用</div>
         </div>
       </header>
-      <section class="login-panel"  v-if="maintainSate != '1'">
+      <section class="login-panel" v-if="maintainState != '1'">
         <div class="login-row">
           <div class="login-in login-account">
             <input type="text" class="login-input" v-model.trim="account" @keyup.enter="login" placeholder="请输入账号"/>
@@ -30,78 +25,40 @@
           </div>
         </div>
         <div class="login-row login-buttons">
-          <el-button class="login-btn" :loading="loading" @click="login" >登&nbsp;&nbsp;&nbsp;&nbsp;录</el-button>
-          <el-button class="login-btn" @click="toService()" style="margin-right: 4px;">在线客服</el-button>
+          <el-button class="login-btn" style="width: 96%;" :loading="loading" @click="login" >登&nbsp;&nbsp;&nbsp;&nbsp;录</el-button>
         </div>
-        <!-- <div class="login-row">
-          <div class="login-service">
-            <div>在线客服</div>
-          </div>
-        </div> -->
-      </section>
-      <section class="login-maintain-panel" v-if="maintainSate == '1'">
-        <div class="login-maintain-content">
-					<!-- {{content}} -->
-					<div class="login-maintain-honorific">
-            {{contentList[0]}}
-					</div>
-					<div class="login-maintain-txt">
-						{{contentList[1]}}
-					</div>
-					<div class="login-maintain-department">
-            {{contentList[2]}}
-					</div>
-				</div>
       </section>
     </div>
   </div>
 </template>
 
 <script>
-  import setting from '@/config/setting'
-  import {  loginApi } from '@/api/loginApi'
-  import {  setToken,getToken} from "@/utils/auth"
-  import {  baseUrl } from "@/utils/config"
-
+  import { loginApi } from '@/api/loginApi'
+  import { setToken, getToken } from "@/utils/auth"
 
   export default {
     data () {
       return {
         account: '',
         password: '',
-        type:'',
-        captcha: '',
-        leftBg: require('@img/lf_bg.png'),
+        captcha:'',
         loading: false,
-        btnText: '登录3',
-        captchaUrl : baseUrl +'/login/captcha',
-        // 1后台管理员 2代理管理员
-        agentType: 1,
         //维护状态 0 正常  1维护
-        maintainSate: '-1',
-        //内容
-        contentList: []
+        maintainState: '-1',
       }
     },
-    created(){
+    created() {
     },
     mounted() {
       let path = '/dashboard/console'
       let router = this.$router
       this.$store.dispatch('worktab/worktabRemoveAll', { path, router})
       localStorage.clear()
-      this.tokenlogin()
+      this.tokenLogin()
     },
     methods: {
-      //获取验证码
-      // getCaptcha() {
-      //       this.captchaUrl = baseUrl +'/login/captcha?t'+Math.random();
-      // },
-      // 登录
-
       login() {
-        // let {account, password, code, captcha,type} = this
-        let {account, password, captcha} = this
+        let { account, password, captcha } = this
         if(!account) {
           this.$message.error('请输入账号')
           return
@@ -115,54 +72,36 @@
           return
         }
 
-        this.adminligon()
+        this.adminLogin()
       },
-       //回车搜索
-        enterSearch(){
-            document.onkeydown = e =>{
-                //13表示回车键
-                if (e.key == 'Enter' ) {
-                }
-            }
-        },
-      adminligon(){
-        let {account, password, code, captcha,type} = this
+
+      adminLogin() {
+        let { account, password, captcha } = this
         loginApi({
           user_name: account,
           pwd: password,
-          captcha: captcha,
-          captchaId: captcha.captchaId,
-          admin_type:type
+          captcha:captcha
         }).then(res => {
           if(res.code === 1) {
             this.loading = true
-            this.btnText = '登录中...'
             this.$store.dispatch('user/setUserInfo', res.data)
             this.$store.dispatch('user/setLoginStatus', true)
             setToken(res.data.token)
-            localStorage.setItem('user_name',account)
+            localStorage.setItem('user_name', account)
             setTimeout(() => {
               this.$router.push('/dashboard/console')
             }, 1000)
-          }
-          if(res.code === 7) {
-            this.getCaptcha()
           }
         })
       },
 
       //跳转到客服
-      toService() {
-        this.$router.push({ path: '/service' })
-      },
-
-      tokenlogin()
-      {
-       getToken()
-       localStorage.getItem('admin_type');
-       if(localStorage.getItem('admin_type') == 1){
-       }else{
-       }
+      tokenLogin() {
+        getToken()
+        localStorage.getItem('admin_type')
+        if(localStorage.getItem('admin_type') == 1) {
+        } else {
+        }
       }
     }
   }

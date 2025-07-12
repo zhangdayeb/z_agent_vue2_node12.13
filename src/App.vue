@@ -1,22 +1,10 @@
 <template>
   <div id="app" style="height: 100%">
     <router-view/>
-
-    <!-- 全局通知弹窗 - 只需要在这里引入一次 -->
-    <NotificationModal
-      :visible="$store.state.notification.visible"
-      :type="$store.state.notification.type"
-      :amount="$store.state.notification.amount"
-      :userName="$store.state.notification.userName"
-      @close="closeNotification"
-    />
-
   </div>
 </template>
 
 <script>
-  import axios from 'axios'
-  import { allowRouters } from '@/router/index.js'
   export default {
     name: 'App',
     created() {
