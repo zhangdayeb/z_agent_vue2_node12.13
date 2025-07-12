@@ -44,7 +44,7 @@ export const allowRouters = [
     component: Home,
     meta: { title: '控制面板' },
     children: [
-      { path: 'console', component: Console, meta: { title: '控制面板' } }
+      { path: 'console', component: Console, meta: { title: '控制台' } }
     ]
   },
   // 代理管理

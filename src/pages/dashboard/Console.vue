@@ -1,259 +1,69 @@
 <template>
   <div class="task console">
-    <console-card />
+    <div class="welcome-container">
+      <h1 class="welcome-text">欢迎光临管理后台</h1>
+    </div>
   </div>
 </template>
 
 <script>
-  import ConsoleCard from "@/components/dashboard/ConsoleCard"
-  import {
-    getConfigInfoApi,getConfigEditApi,getClearTokenApi,getMysqlBackupsApi,getMysqlRecordsApi
-  } from '@/api/CountApi'
-  export default {
-    data () {
-      return {
-        primary:'primary',
-        weihu: '开启平台维护',
-        web_maintain:[],
-      }
-    },
-    components: {
-      ConsoleCard,
-    },
-    mounted() {
-      //获取配置
-      this.getConfigInfo();
-    },
-    methods: {
-      getConfigInfo(){
-        getConfigInfoApi({name:'web_maintain'}).then(res => {
-          if (res.code == 1) {
-            this.web_maintain=res.data
-            if (res.data.value == 1){
-              this.weihu = '平台维护中'
-              this.primary = 'warning'
-            }else{
-              this.weihu = '开启平台维护'
-              this.primary = 'primary'
-            }
-          }
-        })
-      },
-      order() {
-        this.$confirm('确定备份吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getMysqlRecordsApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '备份成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '备份失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消备份'
-          });
-        });
-      },
-      restart() {
-        this.$confirm('确定切换平台状态吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          if (this.web_maintain.value == 1){
-            this.web_maintain.value=0;
-          }else {
-            this.web_maintain.value = 1;
-          }
-
-          getConfigEditApi(this.web_maintain).then(res => {
-            if (res.code == 1) {
-              this.getConfigInfo();
-              this.$message({
-                type: 'success',
-                message: '修改成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '修改失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '请检查web_maintain配置'
-          });
-        });
-      },
-      stop() {
-        this.$confirm('确定清理吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getClearTokenApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '清理成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '清理失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消清理'
-          });
-        });
-      },
-
-      luzhu() {
-        this.$confirm('确定备份吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning'
-        }).then(() => {
-          getMysqlBackupsApi().then(res => {
-            if (res.code == 1) {
-              this.$message({
-                type: 'success',
-                message: '备份成功!'
-              })
-            } else {
-              this.$message({
-                type: 'info',
-                message: '备份失败'
-              });
-            }
-          })
-
-        }).catch(() => {
-          this.$message({
-            type: 'info',
-            message: '取消备份'
-          });
-        });
-      }
-
-    }
+export default {
+  name: 'StaticConsole',
+  data() {
+    return {}
   }
+}
 </script>
 
 <style lang="scss" scoped>
+.console {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  &::-webkit-scrollbar {
+    width: 0px !important;
+  }
+
+  .welcome-container {
+    text-align: center;
+    padding: 40px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e8e8e8;
+  }
+
+  .welcome-text {
+    color: #1890FF;
+    font-size: 28px;
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: 2px;
+  }
+}
+
+@media only screen and (max-width: 768px) {
   .console {
-    height: 100%;
-
-    &::-webkit-scrollbar {
-      width: 0px !important;
+    .welcome-container {
+      padding: 30px 20px;
+      margin: 20px;
     }
 
-    >>>.head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding-right: 20px;
-      padding: 10px 0;
-      border-bottom: 1px solid #F0F0F0;
-      position: relative;
-      z-index: 999;
-
-      .line-title {
-        padding: 0 13px;
-        display: flex;
-        align-items: center;
-
-        i {
-          display: inline-block;
-          width: 24px;
-          height: 24px;
-          line-height: 24px;
-          text-align: center;
-          border-radius: 50%;
-          color: #1890FF;
-          background-color: rgb(230, 247, 255);
-          font-size: 15px;
-        }
-
-        span {
-          color: #555;
-          font-size: 15px;
-          margin-left: 10px;
-        }
-      }
-    }
-
-    .row {
-      display: flex;
-      margin-top: 15px;
-      background: transparent !important;
-
-      >div {
-        margin-right: 15px;
-        overflow: hidden;
-        background: #fff;
-        border-radius: 3px;
-        transition: box-shadow .3s;
-
-        &:last-of-type {
-          margin-right: 0 !important;
-        }
-      }
-    }
-
-    .row1,
-    .row2 {
-      height: 380px;
+    .welcome-text {
+      font-size: 24px;
     }
   }
+}
 
-  @media only screen and (max-width: $device-notebook) {
-    .console {
-      .row1 {
-        height: 350px;
-      }
-
-      .row2 {
-        height: 300px;
-      }
+@media only screen and (max-width: 480px) {
+  .console {
+    .welcome-text {
+      font-size: 20px;
+      letter-spacing: 1px;
     }
   }
-
-  @media only screen and (max-width: $device-ipad) {
-    .console {
-
-      .row {
-        display: block;
-        height: auto !important;
-
-        >div {
-          height: 370px;
-        }
-      }
-
-      .row1 {
-        margin-top: 0;
-      }
-    }
-  }
+}
 </style>
