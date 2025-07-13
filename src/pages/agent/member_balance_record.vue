@@ -116,7 +116,7 @@
 </template>
 
 <script>
-import { memberBalanceRecordApi } from '@/api/agent'
+import { memberBalanceRecordApi } from '@/api/agentApi'
 
 export default {
   name: 'MemberBalanceRecord',
