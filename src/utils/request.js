@@ -4,15 +4,11 @@ import router from '../router'
 import { baseUrl, group_prefix } from "./config.js"
 import { Message } from "element-ui"
 import qs from 'qs'
+import { getToken, removeToken } from "@/utils/auth"  // 导入统一的auth工具函数
 
 let cancel, promiseArr = {}
 const CancelToken = axios.CancelToken
 const source = CancelToken.source()
-
-// 从localStorage获取token
-function getTokenFromStorage() {
-  return localStorage.getItem('token') || ''
-}
 
 //请求拦截器
 axios.interceptors.request.use(
@@ -30,8 +26,8 @@ axios.interceptors.request.use(
     // 拼接域名
     config.url = baseUrl + config.url
 
-    // 获取token
-    const token = getTokenFromStorage()
+    // 使用统一的 getToken() 获取token
+    const token = getToken()
 
     // 设置请求头 - JWT标准格式
     config.headers = {
@@ -62,7 +58,7 @@ axios.interceptors.response.use(
     if (code === 7) {
       setTimeout(() => {
         document.getElementsByTagName("html")[0].removeAttribute('class') // 移除暗黑主题
-        localStorage.removeItem('token') // 清除token
+        removeToken() // 使用统一的清除token函数
         store.dispatch('user/setLoginStatus', false)
         router.replace('/login')
         // 使用router.go(0)而不是this.$router.go(0)
@@ -83,7 +79,7 @@ axios.interceptors.response.use(
         case 401:
           err.message = "未授权 - 请重新登录"
           // 401状态码处理 - 清除token并跳转登录
-          localStorage.removeItem('token')
+          removeToken() // 使用统一的清除token函数
           store.dispatch('user/setLoginStatus', false)
           if (!window.location.hash.includes('login')) {
             router.replace('/login')
