@@ -32,7 +32,7 @@
   import setting from '@/config/setting'
   import Submenu from './Submenu.vue';
   import { mapState } from 'vuex'
-  import { getMenuListApi } from "@/api/menu"
+  import { getMenuListApi } from "@/api/menuListApi"
   export default {
     name: "MenuLeft",
     inject: ['reload'],
@@ -100,7 +100,6 @@
     methods: {
       // 获取菜单列表|权限列表
       getMenuList() {
-        // this.menuList = this.$store.state.menu.menuList
         getMenuListApi().then(res=>{
           if(res.code == 1){
             this.menuList = res.data.data
