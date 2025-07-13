@@ -167,6 +167,7 @@ export default {
   },
 
   methods: {
+
     /**
      * 加载会员列表
      */
@@ -193,9 +194,18 @@ export default {
         // 调用API
         const response = await memberApi(params)
 
+        // 详细日志输出，帮助调试
+        console.log('API 响应:', response)
+        console.log('响应类型:', typeof response)
+        console.log('响应状态码:', response.code)
+
+        // 修改这里：你的后端返回的成功状态码是 200，不是传统的 1
         if (response.code === 200) {
           this.memberList = response.data.list || []
           this.totalCount = response.data.total || 0
+
+          // 成功时也可以显示一个成功消息（可选）
+          // this.$message.success('会员列表加载成功')
         } else {
           this.$message.error(response.message || '获取会员列表失败')
           this.memberList = []
@@ -203,8 +213,27 @@ export default {
         }
 
       } catch (error) {
-        console.error('加载会员列表失败:', error)
-        this.$message.error('网络请求失败，请稍后重试')
+        // 更详细的错误日志
+        console.error('加载会员列表详细错误信息:', error)
+        console.error('错误类型:', error.name)
+        console.error('错误消息:', error.message)
+        console.error('错误堆栈:', error.stack)
+
+        // 检查是否是网络错误还是业务逻辑错误
+        if (error.response) {
+          // 服务器返回了错误状态码
+          console.error('服务器错误状态:', error.response.status)
+          console.error('服务器错误数据:', error.response.data)
+          this.$message.error(`服务器错误: ${error.response.status}`)
+        } else if (error.request) {
+          // 请求已发出但没有收到响应
+          console.error('网络请求无响应:', error.request)
+          this.$message.error('网络连接超时，请检查网络连接')
+        } else {
+          // 其他错误
+          this.$message.error('请求配置错误或其他未知错误')
+        }
+
         this.memberList = []
         this.totalCount = 0
       } finally {
