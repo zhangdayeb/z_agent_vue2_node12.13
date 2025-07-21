@@ -103,6 +103,17 @@
           </el-table-column>
 
           <el-table-column
+            prop="money_fanyong"
+            label="返佣余额"
+            width="120"
+            align="right"
+          >
+            <template slot-scope="scope">
+              <span class="rebate-text">{{ formatMoney(scope.row.money_fanyong) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column
             prop="vip_grade"
             label="会员等级"
             width="100"
