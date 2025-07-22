@@ -83,11 +83,21 @@
           <el-table-column
             prop="money"
             label="当前余额"
-            width="120"
+            width="140"
             align="right"
           >
             <template slot-scope="scope">
-              <span class="money-text">{{ formatMoney(scope.row.money) }}</span>
+              <span
+                :class="{
+                  'money-text': true,
+                  'editable-field': canEditBalance(scope.row)
+                }"
+                :title="canEditBalance(scope.row) ? '点击调整用户余额' : ''"
+                @click="canEditBalance(scope.row) && showBalanceDialog(scope.row)"
+              >
+                {{ formatMoney(scope.row.money) }}
+                <i v-if="canEditBalance(scope.row)" class="el-icon-edit edit-icon"></i>
+              </span>
             </template>
           </el-table-column>
 
@@ -110,6 +120,29 @@
           >
             <template slot-scope="scope">
               <span class="rebate-text">{{ formatMoney(scope.row.money_fanyong) }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column
+            prop="fanyong_proportion"
+            label="返佣比例"
+            width="120"
+            align="center"
+          >
+            <template slot-scope="scope">
+              <span
+                :class="{
+                  'commission-text': true,
+                  'editable-field': canEditCommission(scope.row),
+                  'disabled-field': !canEditCommission(scope.row)
+                }"
+                :title="getCommissionTooltip(scope.row)"
+                @click="canEditCommission(scope.row) && showCommissionDialog(scope.row)"
+              >
+                {{ formatCommission(scope.row.fanyong_proportion) }}
+                <i v-if="canEditCommission(scope.row)" class="el-icon-edit edit-icon"></i>
+                <i v-else-if="!canEditCommission(scope.row) && isSubAgent(scope.row)" class="el-icon-lock lock-icon"></i>
+              </span>
             </template>
           </el-table-column>
 
@@ -144,11 +177,113 @@
         </div>
       </el-card>
     </div>
+
+    <!-- 余额调整对话框 -->
+    <el-dialog
+      title="调整用户余额"
+      :visible.sync="balanceDialogVisible"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="currentUser">
+        <div class="dialog-info">
+          <p><strong>用户：</strong>{{ currentUser.name }}</p>
+          <p><strong>当前余额：</strong><span class="money-text">{{ formatMoney(currentUser.money) }}</span></p>
+          <p><strong>代理余额：</strong><span class="money-text">{{ formatMoney(agentBalance) }}</span></p>
+        </div>
+
+        <el-form :model="balanceForm" :rules="balanceRules" ref="balanceForm" label-width="100px">
+          <el-form-item label="调整方式" prop="type">
+            <el-radio-group v-model="balanceForm.type">
+              <el-radio label="add">增加金额</el-radio>
+              <el-radio label="subtract">减少金额</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="调整金额" prop="amount">
+            <el-input
+              v-model="balanceForm.amount"
+              placeholder="请输入调整金额"
+              type="number"
+              step="0.01"
+              min="0.01"
+            >
+              <template slot="append">元</template>
+            </el-input>
+          </el-form-item>
+
+          <el-form-item label="调整后余额">
+            <span class="preview-text">{{ previewUserBalance }}</span>
+          </el-form-item>
+
+          <el-form-item label="调整后代理余额">
+            <span class="preview-text">{{ previewAgentBalance }}</span>
+          </el-form-item>
+
+          <el-form-item label="备注说明" prop="remark">
+            <el-input
+              v-model="balanceForm.remark"
+              type="textarea"
+              placeholder="请输入备注说明"
+              :rows="3"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="balanceDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleBalanceSubmit" :loading="submitLoading">确认调整</el-button>
+      </span>
+    </el-dialog>
+
+    <!-- 返佣比例调整对话框 -->
+    <el-dialog
+      title="调整返佣比例"
+      :visible.sync="commissionDialogVisible"
+      width="450px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="currentUser">
+        <div class="dialog-info">
+          <p><strong>用户：</strong>{{ currentUser.name }}</p>
+          <p><strong>当前返佣比例：</strong><span class="commission-text">{{ formatCommission(currentUser.fanyong_proportion) }}</span></p>
+        </div>
+
+        <el-form :model="commissionForm" :rules="commissionRules" ref="commissionForm" label-width="100px">
+          <el-form-item label="新返佣比例" prop="proportion">
+            <el-input
+              v-model="commissionForm.proportion"
+              placeholder="请输入返佣比例 (如: 0.05)"
+              type="number"
+              step="0.01"
+              min="0"
+              max="1"
+            />
+            <div class="form-tip">范围：0.00 - 1.00</div>
+          </el-form-item>
+
+          <el-form-item label="备注说明" prop="remark">
+            <el-input
+              v-model="commissionForm.remark"
+              type="textarea"
+              placeholder="请输入备注说明"
+              :rows="3"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="commissionDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handleCommissionSubmit" :loading="submitLoading">确认调整</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { memberApi } from '@/api/agentApi'
+import { memberApi, adjustMemberBalanceApi, adjustMemberCommissionApi } from '@/api/agentApi'
 
 export default {
   name: 'Member',
@@ -169,16 +304,89 @@ export default {
       pagination: {
         page: 1,
         limit: 20
+      },
+
+      // 代理余额
+      agentBalance: 0,
+
+      // 余额调整对话框
+      balanceDialogVisible: false,
+      currentUser: null,
+      submitLoading: false,
+      balanceForm: {
+        type: 'add',
+        amount: '',
+        remark: ''
+      },
+      balanceRules: {
+        type: [
+          { required: true, message: '请选择调整方式', trigger: 'change' }
+        ],
+        amount: [
+          { required: true, message: '请输入调整金额', trigger: 'blur' },
+          { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的金额', trigger: 'blur' },
+          { validator: this.validateAmount, trigger: 'blur' }
+        ],
+        remark: [
+          { required: true, message: '请输入备注说明', trigger: 'blur' }
+        ]
+      },
+
+      // 返佣比例调整对话框
+      commissionDialogVisible: false,
+      commissionForm: {
+        proportion: '',
+        remark: ''
+      },
+      commissionRules: {
+        proportion: [
+          { required: true, message: '请输入返佣比例', trigger: 'blur' },
+          { pattern: /^(0(\.\d{1,4})?|1(\.0{1,4})?)$/, message: '请输入0.00-1.00之间的数值', trigger: 'blur' }
+        ],
+        remark: [
+          { required: true, message: '请输入备注说明', trigger: 'blur' }
+        ]
+      }
+    }
+  },
+
+  computed: {
+    // 预览调整后的用户余额
+    previewUserBalance() {
+      if (!this.currentUser || !this.balanceForm.amount) {
+        return this.formatMoney(this.currentUser && this.currentUser.money ? this.currentUser.money : 0)
+      }
+
+      const currentMoney = parseFloat(this.currentUser.money)
+      const adjustAmount = parseFloat(this.balanceForm.amount)
+
+      if (this.balanceForm.type === 'add') {
+        return this.formatMoney(currentMoney + adjustAmount)
+      } else {
+        return this.formatMoney(currentMoney - adjustAmount)
+      }
+    },
+
+    // 预览调整后的代理余额
+    previewAgentBalance() {
+      if (!this.balanceForm.amount) return this.formatMoney(this.agentBalance)
+
+      const adjustAmount = parseFloat(this.balanceForm.amount)
+
+      if (this.balanceForm.type === 'add') {
+        return this.formatMoney(this.agentBalance - adjustAmount)
+      } else {
+        return this.formatMoney(this.agentBalance + adjustAmount)
       }
     }
   },
 
   mounted() {
     this.loadMemberList()
+    this.loadAgentBalance()
   },
 
   methods: {
-
     /**
      * 加载会员列表
      */
@@ -205,18 +413,9 @@ export default {
         // 调用API
         const response = await memberApi(params)
 
-        // 详细日志输出，帮助调试
-        console.log('API 响应:', response)
-        console.log('响应类型:', typeof response)
-        console.log('响应状态码:', response.code)
-
-        // 修改这里：你的后端返回的成功状态码是 200，不是传统的 1
         if (response.code === 200) {
           this.memberList = response.data.list || []
           this.totalCount = response.data.total || 0
-
-          // 成功时也可以显示一个成功消息（可选）
-          // this.$message.success('会员列表加载成功')
         } else {
           this.$message.error(response.message || '获取会员列表失败')
           this.memberList = []
@@ -224,27 +423,8 @@ export default {
         }
 
       } catch (error) {
-        // 更详细的错误日志
-        console.error('加载会员列表详细错误信息:', error)
-        console.error('错误类型:', error.name)
-        console.error('错误消息:', error.message)
-        console.error('错误堆栈:', error.stack)
-
-        // 检查是否是网络错误还是业务逻辑错误
-        if (error.response) {
-          // 服务器返回了错误状态码
-          console.error('服务器错误状态:', error.response.status)
-          console.error('服务器错误数据:', error.response.data)
-          this.$message.error(`服务器错误: ${error.response.status}`)
-        } else if (error.request) {
-          // 请求已发出但没有收到响应
-          console.error('网络请求无响应:', error.request)
-          this.$message.error('网络连接超时，请检查网络连接')
-        } else {
-          // 其他错误
-          this.$message.error('请求配置错误或其他未知错误')
-        }
-
+        console.error('加载会员列表错误:', error)
+        this.$message.error('网络连接异常，请稍后重试')
         this.memberList = []
         this.totalCount = 0
       } finally {
@@ -253,10 +433,181 @@ export default {
     },
 
     /**
+     * 加载代理余额
+     */
+    async loadAgentBalance() {
+      try {
+        // 这里需要调用获取代理信息的API
+        // const response = await getAgentInfoApi()
+        // this.agentBalance = response.data.money || 0
+        this.agentBalance = 10000 // 临时数据
+      } catch (error) {
+        console.error('获取代理余额失败:', error)
+      }
+    },
+
+    /**
+     * 判断是否可以调整余额
+     */
+    canEditBalance(row) {
+      // 只要是该代理下的用户就可以调整余额
+      return true // 根据实际业务逻辑调整
+    },
+
+    /**
+     * 判断是否可以调整返佣比例
+     */
+    canEditCommission(row) {
+      // 只有 user_agent_id_1 为空或0的用户才能调整
+      return !row.user_agent_id_1 || row.user_agent_id_1 === 0
+    },
+
+    /**
+     * 判断是否是子级代理用户
+     */
+    isSubAgent(row) {
+      return row.user_agent_id_1 && row.user_agent_id_1 !== 0
+    },
+
+    /**
+     * 获取返佣比例提示文本
+     */
+    getCommissionTooltip(row) {
+      if (this.canEditCommission(row)) {
+        return '点击调整返佣比例'
+      } else if (this.isSubAgent(row)) {
+        return '该用户的返佣比例只能通过用户前端进行调整，请登录相应的用户账号'
+      }
+      return ''
+    },
+
+    /**
+     * 显示余额调整对话框
+     */
+    showBalanceDialog(row) {
+      this.currentUser = { ...row }
+      this.balanceForm = {
+        type: 'add',
+        amount: '',
+        remark: ''
+      }
+      this.balanceDialogVisible = true
+    },
+
+    /**
+     * 显示返佣比例调整对话框
+     */
+    showCommissionDialog(row) {
+      this.currentUser = { ...row }
+      this.commissionForm = {
+        proportion: row.fanyong_proportion || '0.00',
+        remark: ''
+      }
+      this.commissionDialogVisible = true
+    },
+
+    /**
+     * 提交余额调整
+     */
+    async handleBalanceSubmit() {
+      try {
+        await this.$refs.balanceForm.validate()
+
+        this.submitLoading = true
+
+        const params = {
+          user_id: this.currentUser.id,
+          type: this.balanceForm.type,
+          amount: parseFloat(this.balanceForm.amount),
+          remark: this.balanceForm.remark
+        }
+
+        const response = await adjustMemberBalanceApi(params)
+
+        if (response.code === 200) {
+          this.$message.success('余额调整成功')
+          this.balanceDialogVisible = false
+          this.loadMemberList()
+          this.loadAgentBalance()
+        } else {
+          this.$message.error(response.message || '余额调整失败')
+        }
+
+      } catch (error) {
+        if (error !== false) { // 不是表单验证错误
+          console.error('余额调整错误:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      } finally {
+        this.submitLoading = false
+      }
+    },
+
+    /**
+     * 提交返佣比例调整
+     */
+    async handleCommissionSubmit() {
+      try {
+        await this.$refs.commissionForm.validate()
+
+        this.submitLoading = true
+
+        const params = {
+          user_id: this.currentUser.id,
+          proportion: parseFloat(this.commissionForm.proportion),
+          remark: this.commissionForm.remark
+        }
+
+        const response = await adjustMemberCommissionApi(params)
+
+        if (response.code === 200) {
+          this.$message.success('返佣比例调整成功')
+          this.commissionDialogVisible = false
+          this.loadMemberList()
+        } else {
+          this.$message.error(response.message || '返佣比例调整失败')
+        }
+
+      } catch (error) {
+        if (error !== false) { // 不是表单验证错误
+          console.error('返佣比例调整错误:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      } finally {
+        this.submitLoading = false
+      }
+    },
+
+    /**
+     * 验证调整金额
+     */
+    validateAmount(rule, value, callback) {
+      const amount = parseFloat(value)
+      if (isNaN(amount) || amount <= 0) {
+        callback(new Error('调整金额必须大于0'))
+        return
+      }
+
+      if (this.balanceForm.type === 'add') {
+        if (amount > this.agentBalance) {
+          callback(new Error('代理余额不足'))
+          return
+        }
+      } else {
+        if (amount > parseFloat(this.currentUser.money)) {
+          callback(new Error('用户余额不足'))
+          return
+        }
+      }
+
+      callback()
+    },
+
+    /**
      * 搜索处理
      */
     handleSearch() {
-      this.pagination.page = 1 // 重置到第一页
+      this.pagination.page = 1
       this.loadMemberList()
     },
 
@@ -294,7 +645,7 @@ export default {
      */
     formatDateTime(datetime) {
       if (!datetime) return '-'
-      return datetime.replace(/:\d{2}$/, '') // 去掉秒数，只显示到分钟
+      return datetime.replace(/:\d{2}$/, '')
     },
 
     /**
@@ -309,13 +660,21 @@ export default {
     },
 
     /**
+     * 格式化返佣比例
+     */
+    formatCommission(proportion) {
+      if (proportion === null || proportion === undefined) return '0.00'
+      return parseFloat(proportion).toFixed(2)
+    },
+
+    /**
      * 获取VIP等级标签类型
      */
     getVipTagType(vipGrade) {
-      if (vipGrade >= 5) return 'danger'   // 红色
-      if (vipGrade >= 3) return 'warning'  // 橙色
-      if (vipGrade >= 1) return 'success'  // 绿色
-      return 'info'                        // 灰色
+      if (vipGrade >= 5) return 'danger'
+      if (vipGrade >= 3) return 'warning'
+      if (vipGrade >= 1) return 'success'
+      return 'info'
     }
   }
 }
@@ -368,8 +727,78 @@ export default {
   font-weight: 600;
 }
 
+.commission-text {
+  color: #409EFF;
+  font-weight: 600;
+}
+
+.editable-field {
+  cursor: pointer;
+  position: relative;
+  padding-right: 16px;
+}
+
+.editable-field:hover {
+  background-color: #f5f7fa;
+  padding: 2px 16px 2px 4px;
+  border-radius: 4px;
+}
+
+.disabled-field {
+  color: #C0C4CC;
+  cursor: not-allowed;
+  position: relative;
+  padding-right: 16px;
+}
+
+.edit-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #409EFF;
+  font-size: 12px;
+}
+
+.lock-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #F56C6C;
+  font-size: 12px;
+}
+
 .pagination-wrapper {
   margin-top: 20px;
+  text-align: right;
+}
+
+.dialog-info {
+  background-color: #f5f7fa;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.dialog-info p {
+  margin: 8px 0;
+  color: #606266;
+}
+
+.preview-text {
+  color: #67C23A;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+}
+
+.dialog-footer {
   text-align: right;
 }
 

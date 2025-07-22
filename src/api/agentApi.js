@@ -10,6 +10,36 @@ export function memberApi(params) {
   })
 }
 
+// 调整会员余额
+export function adjustMemberBalanceApi(params) {
+  return axios.post({
+    url: '/agent/adjust_balance',
+    data: params
+  }).then((res) => {
+    return res
+  })
+}
+
+// 调整会员返佣比例
+export function adjustMemberCommissionApi(params) {
+  return axios.post({
+    url: '/agent/adjust_commission',
+    data: params
+  }).then((res) => {
+    return res
+  })
+}
+
+// 获取代理信息
+export function getAgentInfoApi(params) {
+  return axios.post({
+    url: '/agent/member/get_agent_info',
+    data: params
+  }).then((res) => {
+    return res
+  })
+}
+
 // 推广信息
 export function promotionApi(params) {
   return axios.post({
@@ -79,7 +109,6 @@ export function memberRebateRecordApi(params) {
     return res
   })
 }
-
 
 // 集团信息获取
 export function setGroupApi(params) {
